@@ -25,8 +25,6 @@ jobs:
       - name: Build
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
       - name: Deploy to production
-        run: |
-          url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} | tail -n1)
-          echo "Deployed: $url"
-          # Re-point the clean production alias at this deployment.
-          vercel alias set "$url" webxr-quest.vercel.app --token=${{ secrets.VERCEL_TOKEN }} --scope=meta-vr
+        # The project's production domains (incl. webxr-quest.vercel.app) are
+        # assigned to the Production environment in Vercel, so --prod auto-aliases them.
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
