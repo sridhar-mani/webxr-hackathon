@@ -1,46 +1,18 @@
-import {
-  createSystem,
-  PanelUI,
-  PanelDocument,
-  eq,
-  VisibilityState,
-  UIKitDocument,
-  UIKit,
-} from "@iwsdk/core";
+import { UIKitMLAsset, VisibilityState, World } from "@iwsdk/core";
 
-/**
- * Wires the welcome panel's #xr-button to enter/exit the immersive session and
- * keeps its label in sync with the world's visibility state. Mirrors the iWSDK
- * scaffold's panel pattern.
- */
-export class PanelSystem extends createSystem({
-  welcomePanel: {
-    required: [PanelUI, PanelDocument],
-    where: [eq(PanelUI, "config", "./ui/welcome.json")],
-  },
-}) {
-  init() {
-    this.queries.welcomePanel.subscribe("qualify", (entity) => {
-      const document = PanelDocument.data.document[entity.index] as UIKitDocument;
-      if (!document) return;
+export function configureWelcomePanel(world: World, panel: UIKitMLAsset): void {
+  const xrButton = panel.requireElementById("xr-button");
+  const exitButton = panel.requireElementById("exit-button");
 
-      const xrButton = document.getElementById("xr-button") as UIKit.Text;
-      xrButton.addEventListener("click", () => {
-        if (this.world.visibilityState.value === VisibilityState.NonImmersive) {
-          this.world.launchXR();
-        } else {
-          this.world.exitXR();
-        }
-      });
+  const launchXR = () => world.launchXR();
+  const exitXR = () => world.exitXR();
 
-      this.world.visibilityState.subscribe((visibilityState) => {
-        xrButton.setProperties({
-          text:
-            visibilityState === VisibilityState.NonImmersive
-              ? "Enter VR"
-              : "Exit to Browser",
-        });
-      });
-    });
-  }
+  xrButton.addEventListener("click", launchXR);
+  exitButton.addEventListener("click", exitXR);
+
+  world.visibilityState.subscribe((visibilityState) => {
+    const is2D = visibilityState === VisibilityState.NonImmersive;
+    xrButton.setProperties({ display: is2D ? "flex" : "none" });
+    exitButton.setProperties({ display: is2D ? "none" : "flex" });
+  });
 }
