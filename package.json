@@ -4,24 +4,14 @@
   "private": true,
   "type": "module",
   "description": "Immersive WebXR starter for Meta Quest built on Meta's Immersive Web SDK (IWSDK), Three.js, Vite, and PWA.",
-  "keywords": [
-    "quest",
-    "meta-quest",
-    "webxr",
-    "vr",
-    "ar",
-    "iwsdk",
-    "immersive-web-sdk",
-    "three",
-    "pwa",
-    "vite"
-  ],
+  "keywords": ["quest","meta-quest","webxr","vr","ar","iwsdk","immersive-web-sdk","three","vite","pwa"],
   "scripts": {
     "dev": "iwsdk dev restart --open --foreground",
     "dev:runtime": "vite",
     "dev:down": "iwsdk dev down",
     "dev:status": "iwsdk dev status",
     "typecheck": "tsc --noEmit",
+    "test": "node --test src/domain/fit.test.ts",
     "build": "vite build",
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.mjs"
