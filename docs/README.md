@@ -8,6 +8,9 @@
 - [Fit Engine and Simulation](./FIT_ENGINE.md)
 - [Camera-Based Real-Person Try-On](./CAMERA_TRYON.md)
 
+## Libraries and Intelligence
+- [Verified Library and SDK Matrix](./LIBRARY_MATRIX.md)
+
 ## Intelligence and Engineering
 - [Agent Architecture](./AGENT_ARCHITECTURE.md)
 - [Technical Architecture](./TECHNICAL_ARCHITECTURE.md)
