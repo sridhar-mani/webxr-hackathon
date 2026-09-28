@@ -1,274 +1,410 @@
-# Library and SDK Matrix — Verified September 28, 2026
+# Library Audit — Verified September 28, 2026
 
-This document records maintained libraries that can help the Spatial Wardrobe Companion. We intentionally do **not** add every library at once. Each package should enter the project only when its feature is ready.
+This is a maintenance-focused dependency review for the Spatial Wardrobe Companion.
 
-## 1. Core interaction and 3D
+## How "good" was evaluated
 
-| Area | Library | Decision | Use |
-|---|---|---|---|
-| XR runtime | `@iwsdk/core` | **Already installed / core** | XR lifecycle, ECS, hand/controller interaction |
-| Spatial UI | `@pmndrs/uikit` | **Already installed / core** | World-space UI |
-| Icons | `@pmndrs/uikit-lucide` / Lucide | **Already installed / core** | Spatial iconography |
-| Scene rendering | `super-three` through IWSDK | **Already installed / core** | Three.js scene/rendering |
-| State | `zustand` | **Add when app state expands** | Lightweight state for wardrobe, session, agent, try-on |
-| IDs | `nanoid` | **Add** | Stable garment/outfit/event IDs |
+npm does not provide a trustworthy consumer-review score for libraries, so this audit uses:
+- current npm release/version;
+- recent release activity;
+- npm dependents/downloads where available;
+- GitHub stars and visible repository activity;
+- TypeScript/ESM/browser suitability;
+- dependency count and approximate bundle size when published;
+- relevance to this IWSDK + direct Three.js + Quest Browser architecture.
 
-Zustand remains actively maintained, with current 5.x releases and open maintenance work in September 2026. NanoID 6.0.1 is current on npm.
+A package is not recommended simply because it is popular.
 
-## 2. 3D assets and geometry
+---
 
-| Library | Decision | Use |
-|---|---|---|
-| `@gltf-transform/core` | **Add to asset tooling** | Read/edit/write GLB/glTF |
-| `@gltf-transform/functions` | **Add to asset tooling** | Simplify, deduplicate, optimize and transform assets |
-| `meshoptimizer` | **Add** | Mesh compression/optimization and runtime decoding |
-| `three-mesh-bvh` | **Add** | Fast raycasting, nearest/closest-point queries, spatial queries, future collision helpers |
-| Three.js KTX2/Basis tooling | **Use through Three/IWSDK** | GPU-friendly texture compression |
+## Tier A — strong additions
 
-glTF Transform 4.5.0 is current on npm and actively maintained. Meshoptimizer 1.3.0 is current on npm. three-mesh-bvh 0.9.15 was released September 9, 2026 and has active work for WebGPU, skinned meshes and BVH refitting.
+### 1. `valibot`
+**Current:** 1.5.0
 
-Use glTF Transform primarily as a **build-time asset pipeline**. Avoid putting heavy optimization work into the Quest runtime.
+Use for:
+- garment schemas;
+- user profile;
+- fit results;
+- agent tool input/output;
+- persisted data validation.
 
-## 3. Physics and collisions
+Why:
+- zero dependencies;
+- modular;
+- starts at less than 700 bytes for small schemas;
+- 100% test coverage is claimed by the project;
+- 9k GitHub stars;
+- published within days of this audit.
 
-| Library | Decision | Use |
-|---|---|---|
-| `@dimforge/rapier3d` | **Evaluate first** | Rigid-body collision, capsule/box/sphere proxies, interaction physics |
-| `@dimforge/rapier3d-compat` | **Fallback for bundling** | Same Rapier API with embedded WASM when bundlers have problems |
-| Custom PBD/XPBD | **Preferred for cloth** | Garment-specific cloth dynamics |
+This is now the preferred validation layer for the project.
 
-Rapier 3D 0.21.0 is current and officially maintained. The compat build exists specifically for bundlers that struggle with WASM.
+AI SDK explicitly supports Valibot through ` @ai-sdk/valibot`, so we do not need to choose Zod merely for AI tooling compatibility.
 
-Important: Rapier is **not** our cloth solution. Use it for rigid collisions and scene physics. The cloth solver remains a project-specific PBD/XPBD subsystem.
+References:
+- https://www.npmjs.com/package/valibot
+- https://github.com/open-circle/valibot
+- https://ai-sdk.dev/docs/foundations/tools
 
-## 4. Camera and computer vision
+### 2. `zustand`
+**Current:** 5.0.15
 
-| Library | Decision | Use |
-|---|---|---|
-| `@mediapipe/tasks-vision` | **Add** | Pose/landmarks and vision tasks in browser |
-| OpenCV.js | **Optional** | Image preprocessing, masks, morphology, geometric utilities |
-| TensorFlow.js body-segmentation | **Alternative only** | Use only if MediaPipe segmentation is insufficient |
+Use for:
+- current wardrobe/session state;
+- selected garment;
+- current outfit;
+- UI mode;
+- user preferences.
 
-MediaPipe Tasks Vision 1.0.1 is current on npm and contains built-in TypeScript declarations. MediaPipe's upstream repository is actively releasing. OpenCV.js 5.0.0 builds exist in 2026, so it is viable, but it is a heavy addition and should not be loaded unless we need its specific image-processing primitives.
+Zustand has zero runtime dependencies on npm, ~58k GitHub stars, and very high npm adoption.
 
-Do not load both MediaPipe and TensorFlow body-segmentation initially.
+Important: our project is not React-based. Use Zustand's vanilla store APIs rather than adding React just to use state management.
 
-## 5. Workers and performance
+Reference:
+- https://www.npmjs.com/package/zustand
+- https://github.com/pmndrs/zustand
 
-| Library | Decision | Use |
-|---|---|---|
-| `comlink` | **Add when CV worker is implemented** | Typed RPC between main thread and Worker |
-| Native Web Worker / OffscreenCanvas | **Core technique** | Keep CV and expensive processing away from XR loop |
+### 3. `xstate`
+**Current:** 5.33.2
 
-Comlink 4.4.2 is current and maintained. The first implementation should still use a plain Worker boundary; Comlink is a convenience layer, not a requirement.
+Use for:
+- app mode machine;
+- camera permission/calibration states;
+- try-on lifecycle;
+- loading/error/retry transitions;
+- preventing impossible UI states.
 
-## 6. Wardrobe search, matching and metadata
+This is complementary to Zustand:
+- **Zustand = application data**
+- **XState = workflow/state-machine control**
 
-| Library | Decision | Use |
-|---|---|---|
-| `fuse.js` | **Add** | Fuzzy wardrobe search and natural-ish text matching |
-| `zod` | **Add** | Runtime validation for garment, fit, agent and saved-outfit schemas |
-| `colord` | **Add only if color reasoning grows** | Color parsing, conversion and harmony calculations |
-| `date-fns` | **Add** | Wear history, recency, packing/travel dates |
+XState is zero-dependency, has ~30k GitHub stars, and its repo shows active updates in September 2026.
 
-Fuse 7.5.0 is current, Zod 4.6.5 is current, Colord 2.10.0 is current, and date-fns 4.4.0 is current.
+Reference:
+- https://www.npmjs.com/package/xstate
+- https://github.com/statelyai/xstate
 
-The fit engine should not use an ML library for basic garment sizing. Structured measurements + explicit rules are simpler, explainable and faster.
+### 4. `motion`
+**Current:** 13.4.4
 
-## 7. AI companion / agent
+This is an important new addition.
 
-There are two viable stacks.
+Motion now has a dedicated `motion/three` integration that can animate:
+- Three.js Object3D transforms;
+- materials;
+- Vector2/3/4 values;
+- shader uniforms;
+- TSL uniform nodes.
 
-### Option A — AI SDK
-`ai`
-
-**Recommendation for the first implementation.**
+The feature was added in the 13.2 line and the package has continued releasing through September 2026.
 
 Use it for:
-- model calls;
-- structured outputs;
-- tool calling;
-- streaming responses;
-- provider abstraction.
+- garment fly-in;
+- wardrobe rearrangement;
+- panel transitions;
+- avatar entrance;
+- springy spatial feedback;
+- material/color transitions;
+- shader-driven transitions.
 
-AI SDK 7.0.x is actively published on npm as of September 2026.
+Do **not** use React Motion APIs; use the framework-free `motion` package with `motion/three`.
 
-### Option B — LangGraph JS
-`@langchain/langgraph`
+Reference:
+- https://www.npmjs.com/package/motion
+- https://motion.dev/docs/three
+- https://motion.dev/changelog
 
-**Use if the agent becomes a genuinely stateful multi-step workflow.**
+### 5. `three-mesh-bvh`
+**Current:** 0.9.15
+
+Use for:
+- accelerated garment raycasting;
+- closest-point queries;
+- spatial selection;
+- garment inspection;
+- later collision helpers.
+
+It is particularly appropriate for this project because it is built specifically around Three.js and supports skinned geometry, shape intersection and worker generation.
+
+Current repository size is ~3.5k GitHub stars and the npm package has zero runtime dependencies.
+
+Reference:
+- https://www.npmjs.com/package/three-mesh-bvh
+- https://github.com/gkjohnson/three-mesh-bvh
+
+### 6. `meshoptimizer`
+**Current:** 1.3.0
+
+Use primarily in build/asset tooling:
+- mesh simplification;
+- compression;
+- runtime decoding where useful.
+
+The npm release is current within days of this audit and the package is widely adopted.
+
+Reference:
+- https://www.npmjs.com/package/meshoptimizer
+
+### 7. `gltf-transform/core` + `gltf-transform/functions`
+**Current:** 4.5.0
+
+Use for:
+- validating garment GLBs;
+- resizing textures;
+- deduplication;
+- simplifying geometry;
+- applying WebP/KTX2/Basis transforms;
+- generating repeatable asset pipelines.
+
+This should mostly stay in tooling/build scripts instead of the XR runtime.
+
+Reference:
+- https://www.npmjs.com/package/@gltf-transform/core
+- https://www.npmjs.com/package/@gltf-transform/functions
+- https://github.com/donmccurdy/glTF-Transform
+
+### 8. `fuse.js`
+**Current:** 7.5.0
+
+Use for:
+- "show blue shirts";
+- fuzzy garment names;
+- wardrobe search;
+- natural-ish filtering before the agent performs deeper reasoning.
+
+The basic build is about 6.8 kB min+gzip and the package is zero-dependency. GitHub shows ~20k stars and strong npm adoption.
+
+Reference:
+- https://www.npmjs.com/package/fuse.js
+- https://github.com/krisk/Fuse
+
+### 9. `dexie`
+**Current:** 4.4.6
+
+Use for:
+- wardrobe persistence;
+- saved outfits;
+- usage history;
+- preferences;
+- local-first memory.
+
+Dexie has been published recently, has >1,000 npm dependents, and is designed specifically around IndexedDB.
+
+Reference:
+- https://www.npmjs.com/package/dexie
+
+### 10. `idb-keyval`
+**Current:** 6.3.0
+
+This is the tiny alternative for simple values.
 
 Use it for:
-- persistent state;
-- multi-step planning;
-- long-running workflows;
-- human-in-the-loop;
-- complex agent graphs.
+- settings;
+- feature flags;
+- camera calibration cache;
+- small local preferences.
 
-LangGraph JS 1.4.x is actively maintained.
+Its npm documentation states ~295 bytes brotli'd for get/set usage.
 
-### Project rule
+Do not use both Dexie and idb-keyval for the same data layer:
+- **Dexie = structured wardrobe database**
+- **idb-keyval = tiny key/value storage**
 
-Do **not** install AI SDK + LangGraph + multiple orchestration frameworks at the same time.
+Reference:
+- https://www.npmjs.com/package/idb-keyval
+- https://github.com/jakearchibald/idb-keyval
 
-Start with:
+### 11. `mediapipe/tasks-vision`
+**Current:** 1.0.1
 
-`AI SDK + Zod + our typed application tools`
+Use for:
+- person/pose detection;
+- landmark tracking;
+- segmentation where supported;
+- future face/hand/vision utilities.
 
-Add LangGraph only if the agent workflow proves to need graph/state orchestration.
+This is the selected browser CV package for the camera feature.
 
-## 8. Persistence and memory
+Reference:
+- https://www.npmjs.com/package/@mediapipe/tasks-vision
 
-| Library | Decision | Use |
-|---|---|---|
-| `dexie` | **Add** | IndexedDB persistence for wardrobe, profile, memories and saved outfits |
-| `@supabase/supabase-js` | **Optional backend** | Sync/auth/cloud storage if cross-device persistence is needed |
+### 12. `dimforge/rapier3d`
+**Current:** 0.21.0
 
-Dexie 4.4.6 is current on npm and actively maintained.
+Use for:
+- rigid-body collisions;
+- proxy body geometry;
+- spatial interaction physics;
+- non-cloth physics.
 
-Supabase JS 2.117.x has releases in September 2026. It is a sensible backend option, but not required for the first offline-first vertical slice.
+Do not use Rapier as the cloth solver.
 
-Recommended architecture:
+The upstream Rapier repository has ~5.8k stars and active September 2026 activity.
 
-**Dexie/local-first → optional Supabase sync later**
+Reference:
+- https://www.npmjs.com/package/@dimforge/rapier3d
+- https://github.com/dimforge/rapier
 
-Do not make the app dependent on a backend just to demo the wardrobe.
+### 13. `stats-gl`
+**Current:** 4.2.3
 
-## 9. Color/style intelligence
+Development dependency only.
 
-No large ML dependency is necessary initially.
+Use for:
+- real FPS;
+- CPU timing;
+- GPU timing;
+- WebGL/WebGPU profiling;
+- worker profiling.
 
-Use:
-- Colord for color conversion;
-- explicit style metadata;
-- color-distance/harmony rules;
-- garment category and formality tags.
+This is particularly valuable because Quest performance is a first-class constraint.
 
-Later we can add image-based color/material extraction using MediaPipe/OpenCV or a model endpoint.
+Reference:
+- https://www.npmjs.com/package/stats-gl
+- https://github.com/RenaudRohlinger/stats-gl
 
-## 10. Visual materials and fabric
+---
 
-| Library/technology | Decision | Use |
-|---|---|---|
-| Three.js TSL / built-in materials | **Preferred** | Fabric shaders, normal maps, roughness, sheen-like effects |
-| `three-custom-shader-material` | **Optional** | Faster custom material experimentation |
-| KTX2/Basis | **Preferred** | Compressed textures |
+## Tier B — useful, but only when needed
 
-Three Custom Shader Material is actively published, but we should prefer Three/IWSDK-native material paths until a custom shader requirement is clear.
+### `ts-pattern` — 5.9.0
+Very good for exhaustive handling of:
+- agent action unions;
+- garment categories;
+- try-on states;
+- interaction events.
 
-## 11. Analytics/dashboard-style views
+It is tiny (~2 kB), zero-dependency, has >4.8M weekly npm downloads, and ~15k GitHub stars. However, its latest stable npm publish is older than the packages above, so it is a quality utility rather than a fast-moving dependency.
 
-No chart framework is required for the competition build.
+Use when the domain state starts getting branch-heavy.
 
-Build:
-- wardrobe counts;
-- usage bars;
-- coverage rings;
-- recent-wear timelines
+Reference:
+- https://www.npmjs.com/package/ts-pattern
+- https://github.com/gvergnaud/ts-pattern
 
-as spatial UI using UIKit/Three.
+### `colord` — 2.10.0
+Use if our color/style engine needs conversions, contrast or color arithmetic.
 
-Only add a chart library if a later screen genuinely needs a conventional chart.
+It is particularly attractive for Quest because the npm package reports about 1.8 kB brotli'd, zero dependencies and a current release.
 
-## 12. Voice
+Reference:
+- https://www.npmjs.com/package/colord
 
-Do **not** add a voice package first.
+### `postprocessing` — 6.39.5
+Good Three.js post-processing library, actively released.
 
-Use browser/platform voice APIs where available and keep voice as an enhancement over hands-first interaction.
+Use only for a specific visual effect such as a subtle vignette, outline or tone treatment. Do not install it as a baseline dependency because fullscreen effects can cost GPU time on Quest.
 
-Voice should issue semantic commands such as:
+Current release requires Three >=0.168.0 and <0.187.0, so it is compatible with the project's `super-three@0.181.0` target, but it still needs device profiling.
 
-`show blue shirts`
-`try the large one`
-`make this more casual`
-`pack for four days`
+Reference:
+- https://www.npmjs.com/package/postprocessing
+- https://github.com/pmndrs/postprocessing
 
-Hands remain sufficient to complete the core experience.
+### `animejs` — 4.5.0
+Current, zero-dependency and well established.
 
-## 13. Feature-to-library map
+We should **not** add it because Motion already gives us a newer Three.js-native path with springs and `motion/three`.
 
-### Spatial wardrobe
-IWSDK + UIKit + Three + MeshBVH + Zustand + Zod
+Reference:
+- https://www.npmjs.com/package/animejs
 
-### Garment inspector
-Three + MeshBVH + glTF Transform + meshoptimizer
+---
 
-### Fit engine
-Zod + custom measurement rules
+## Tier C — deliberately skip
 
-### 3D avatar try-on
-Three + glTF + MeshBVH + optional Rapier
+### `zod`
+Still excellent, but Valibot gives us a significantly smaller modular validation layer and AI SDK supports Valibot directly. Use Zod only if another required dependency forces it.
 
-### Camera try-on
-IWSDK CameraSource + MediaPipe Tasks Vision + Worker/Comlink + custom 2.5D deformation
+### `nanoid`
+Excellent and tiny, but native `crypto.randomUUID()` is sufficient for internal app IDs. Add NanoID only if short URL-safe IDs become a real requirement.
 
-### Outfit builder
-Zustand + Zod + Fuse.js
+Current NanoID 6.0.1 is 118 bytes min+brottled and has enormous adoption, but it is unnecessary for the first version.
 
-### AI stylist
-AI SDK + Zod + typed application tools
+Reference:
+- https://www.npmjs.com/package/nanoid
 
-### Wardrobe memory
-Zustand + Dexie + date-fns + NanoID
+### `eventemitter3`
+Very popular, but we should use native `EventTarget` first unless we hit a specific requirement.
 
-### Packing assistant
-Zustand + Dexie + date-fns + Zod
+### `mitt`
+Extremely tiny (~200 bytes gzipped), but native `EventTarget` is enough for our current architecture.
 
-### Capsule wardrobe
-Fuse.js + custom scoring/rules
+### `zundo`
+Interesting Zustand undo/redo middleware, but the current stable package is much older than our other choices. Prefer a small in-house command/history layer first; revisit if the outfit editor needs robust time travel.
 
-### Wardrobe analytics
-Zustand/Dexie + UIKit
+### `detect-gpu`
+Useful concept, but its current npm release is old. We already have Meta/Three runtime information and can feature-test the actual renderer instead of maintaining another GPU classification table.
 
-### Fabric/material viewer
-Three native materials/TSL + KTX2
+### `camera-controls`
+Excellent library, but camera control is not the problem we have in XR. IWSDK owns the XR camera/input lifecycle.
 
-### Cloth
-Custom PBD/XPBD + optional Rapier collision proxies
+### `popmotion`
+Mature but has not released in years. Motion has absorbed the active direction of this ecosystem.
 
-## 14. Packages we should NOT add casually
+### `tiny-invariant`
+Extremely popular but old and unnecessary; ordinary TypeScript assertions are enough.
 
-Avoid:
-- React Three Fiber — the application is already IWSDK + direct Three;
-- multiple state managers;
-- multiple agent frameworks;
-- multiple body-pose frameworks;
-- generic charting libraries for small spatial visualizations;
-- a full cloth engine before profiling;
-- OpenCV.js merely because it is available;
-- a backend before local-first persistence is working.
+### `radash`
+Useful utility library, but its latest stable line is old relative to the rest of our selected stack. Avoid adding a general-purpose utility kitchen sink.
 
-Every dependency must justify its bundle size, runtime cost, browser compatibility and maintenance burden on Quest.
+### `spring-easing`
+Very small, but old and unnecessary because Motion already gives us springs.
 
-## 15. Recommended dependency sequence
+---
 
-### Now
-- Zustand
-- Zod
+## Recommended project dependency architecture
+
+### Base runtime
+Already present:
+- IWSDK
+- super-three
+- UIKit
+- PWA
+
+### Add early
+- `zustand`
+- `valibot`
+- `xstate`
+- `motion`
+- `three-mesh-bvh`
+- `fuse.js`
+- `dexie`
+- `colord`
+
+### Add for asset pipeline
+- ` @gltf-transform/core`
+- ` @gltf-transform/functions`
+- `meshoptimizer`
+
+### Add for CV
+- ` @mediapipe/tasks-vision`
+- native Web Worker
+- optional `comlink`
+
+### Add for physics
+- ` @dimforge/rapier3d`
+
+### Add for profiling
+- `stats-gl` as dev-only
+
+### Do not add yet
+- OpenCV.js
+- TensorFlow.js body-segmentation
+- postprocessing
+- animejs
 - NanoID
-- glTF Transform (tooling)
-- meshoptimizer
-- three-mesh-bvh
-- Dexie
-- Fuse.js
-- date-fns
-- Colord
+- EventEmitter3
+- Radash
+- Popmotion
+- generic chart library
 
-### When AI is implemented
-- AI SDK
-- provider package as required
+---
 
-### When camera spike passes
-- MediaPipe Tasks Vision
-- Worker
-- optionally Comlink
-- optionally OpenCV.js if profiling shows a concrete need
+## Final architectural rule
 
-### When interaction physics is needed
-- Rapier 3D
+Prefer this order:
 
-### When cloth is justified
-- custom PBD/XPBD subsystem
+**Native platform API → existing IWSDK/Three capability → tiny focused library → larger library**
 
-### Optional cloud phase
-- Supabase JS
+A library must earn its place by solving a concrete problem better than the platform or code we already have.
