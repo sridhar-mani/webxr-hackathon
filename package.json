@@ -18,9 +18,9 @@
   },
   "dependencies": {
     "@iwsdk/core": "^1.0.0",
-    "@pmndrs/uikit": "^1.0.74",
-    "@pmndrs/uikit-horizon": "^1.0.74",
-    "@pmndrs/uikit-lucide": "^1.0.74",
+    "@pmndrs/uikit": "1.0.76",
+    "@pmndrs/uikit-horizon": "1.0.76",
+    "@pmndrs/uikit-lucide": "1.0.76",
     "three": "npm:super-three@0.181.0",
     "vite-plugin-pwa": "^1.0.0"
   },
