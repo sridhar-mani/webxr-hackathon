@@ -39,14 +39,6 @@ export default defineConfig({
     rollupOptions: { input: "./index.html" }
   },
   esbuild: { target: "esnext" },
-  resolve: {
-    dedupe: ["three", "@pmndrs/uikit", "@pmndrs/uikit-horizon", "@pmndrs/uikit-lucide"]
-  },
-  optimizeDeps: {
-    exclude: ["@babylonjs/havok"],
-    include: ["three", "@pmndrs/uikit", "@pmndrs/uikit-horizon", "@pmndrs/uikit-lucide", "@drawcall/uikitml"],
-    esbuildOptions: { target: "esnext" }
-  },
   publicDir: "public",
   base: "./"
 });
